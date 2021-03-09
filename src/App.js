@@ -84,26 +84,18 @@ function testModel(model, inputData, normalizationData) {
   // We un-normalize the data by doing the inverse of the min-max scaling 
   // that we did earlier.
   const [xs, preds] = tf.tidy(() => {
-    const xs = tf.tensor2d(inputData.map(d => d[0]), [inputData.length, 1])
-    // const xs = tf.tens(0, 1, 100);
-    const preds = model.predict(xs.reshape([xs.size, 1]));
-    // const labelMax = preds.max();
-    // const labelMin = preds.min();
 
-    const inputMax = xs.max();
-    const inputMin = xs.min();
+    const xs = tf.linspace(0, 1, 100);
+    const preds = model.predict(xs.reshape([100, 1]));
 
-    const unNormXs = xs.sub(inputMin).div(inputMax.sub(inputMin));
-    const unNormPreds = preds.sub(labelMin).div(labelMax.sub(labelMin));
+    const unNormXs = xs
+      .mul(inputMax.sub(inputMin))
+      .add(inputMin);
 
-    // const unNormXs = xs
-    //   .mul(inputMax.sub(inputMin))
-    //   .add(inputMin);
+    const unNormPreds = preds
+      .mul(labelMax.sub(labelMin))
+      .add(labelMin);
 
-    // const unNormPreds = preds
-    //   .mul(labelMax.sub(labelMin))
-    //   .add(labelMin);
-    console.log(unNormXs)
     // Un-normalize the data
     return [unNormXs.dataSync(), unNormPreds.dataSync()];
   });
@@ -117,8 +109,9 @@ function testModel(model, inputData, normalizationData) {
     x: d[0], y: d[1],
   }));
 
+
   tfvis.render.scatterplot(
-    { name: 'Model Predictions vs Original Data' },
+    document.getElementById('plot2'),
     { values: [originalPoints, predictedPoints], series: ['original', 'predicted'] },
     {
       xLabel: 'Réanimation',
@@ -128,18 +121,16 @@ function testModel(model, inputData, normalizationData) {
   );
 }
 
+
 function App() {
   async function run(data) {
-    const train = data.slice(0, 300);
-    const test = data.slice(301, 352);
-
     const values = data.map(d => ({
       x: d[0],
       y: d[1],
     }));
 
     tfvis.render.scatterplot(
-      { name: 'Réanimation' },
+      document.getElementById('plot1'),
       { values },
       {
         xLabel: 'Réanimation',
@@ -151,14 +142,14 @@ function App() {
     // We want to predict the column "medv", which represents a median value of
     // a home (in $1000s), so we mark it as a label.
     const model = createModel();
-    const tensorData = convertToTensor(train);
+    const tensorData = convertToTensor(data);
 
     const { inputs, labels } = tensorData;
     // console.log(data)
 
     // Train the model
     await trainModel(model, inputs, labels);
-    testModel(model, test, tensorData);
+    testModel(model, data, tensorData);
 
 
     // Fit the model using the prepared Dataset
@@ -179,8 +170,6 @@ function App() {
     high: 0,
     last: 0,
   });
-
-
 
   useEffect(() => {
     async function getDogecoinPrice() {
@@ -203,17 +192,12 @@ function App() {
   return (
     <div className="App">
       <img src={logo} width={150} height={150} alt="Dogecoin Logo" />
-      <h1 className="title">Live Dogecoin Price</h1>
-      <h5 className="subtitle">Dogecoin To The Moon 🚀🌕</h5>
-      <div className="prices-container">
-        {/* <PriceCard type="low" price={ticker.low} />
-        <PriceCard type="high" price={ticker.high} />
-        <PriceCard type="current" price={ticker.last} /> */}
+      <h1 className="title">Live Open source Covid Data</h1>
+      <h5 className="subtitle">Bas-Rhin - Hospitalizations</h5>
+      <div style={{padding: 100}} className="prices-container">
+        <div class="plot" id="plot1"></div>
+        <div class="plot" id="plot2"></div>
       </div>
-      <p>
-        Dogecoin price updated every 10 seconds seconds from{' '}
-        <a href="https://wazirx.com/">WazirX API</a>
-      </p>
     </div>
   );
 }
